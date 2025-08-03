@@ -8,6 +8,7 @@ import hashlib
 
 # === CONFIGURATION ===
 # Set dump URL and local file path here
+DB_PATH = 'data/wiki_pages.db'
 DUMP_URL = 'https://dumps.wikimedia.org/other/shorturls/shorturls-20250728.gz'
 GZ_FILE = 'data/dumps/shorturls-20250728.gz'
 # =====================
