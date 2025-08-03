@@ -34,6 +34,9 @@ In get.py you can set the dump URL and local file path:
 DUMP_URL = 'https://dumps.wikimedia.org/other/shorturls/shorturls-20250728.gz'
 GZ_FILE = 'data/dumps/shorturls-20250728.gz'
 # =====================
+```
+
+---
 
 ## 📌 Usage
 SQLite database: data/wiki_pages.db
