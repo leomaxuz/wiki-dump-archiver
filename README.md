@@ -30,3 +30,28 @@ pip install -r requirements.txt
 DUMP_URL = 'https://dumps.wikimedia.org/other/shorturls/shorturls-20250728.gz'
 GZ_FILE = 'data/dumps/shorturls-20250728.gz'
 # =====================
+
+## 📌 Usage
+bash
+Копировать
+Редактировать
+python get.py
+All pages will be saved in:
+
+SQLite database: data/wiki_pages.db
+
+Original dump file: data/dumps/
+
+## 💡 Idea
+This project helps to keep an offline mirror of selected Wikimedia pages
+by regularly archiving them.
+
+## ☕ Donate
+If you find this project useful, you can support:
+
+UCDT TRC20 wallet: TLkDJb4w188m5kNzGeKD97XGEfpfxrxUye
+
+## 📬 Contact
+Questions, suggestions, or want similar scripts?
+📧 Email: uzbtube@gmail.com
+
