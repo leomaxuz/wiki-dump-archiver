@@ -24,3 +24,9 @@ https://dumps.wikimedia.org/other/shorturls/
 git clone https://github.com/leomaxuz/wiki-dump-archiver.git
 cd wiki-dump-archiver
 pip install -r requirements.txt
+
+# === CONFIGURATION ===
+# Set dump URL and local file path here
+DUMP_URL = 'https://dumps.wikimedia.org/other/shorturls/shorturls-20250728.gz'
+GZ_FILE = 'data/dumps/shorturls-20250728.gz'
+# =====================
