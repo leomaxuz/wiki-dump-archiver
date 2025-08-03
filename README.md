@@ -53,7 +53,7 @@ by regularly archiving them.
 ## ☕ Donate
 If you find this project useful, you can support:
 
-UCDT TRC20 wallet: ###TLkDJb4w188m5kNzGeKD97XGEfpfxrxUye
+UCDT TRC20 wallet: TLkDJb4w188m5kNzGeKD97XGEfpfxrxUye
 
 ---
 
