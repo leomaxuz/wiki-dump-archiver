@@ -42,16 +42,23 @@ SQLite database: data/wiki_pages.db
 
 Original dump file: data/dumps/
 
+---
+
 ## 💡 Idea
 This project helps to keep an offline mirror of selected Wikimedia pages
 by regularly archiving them.
+
+---
 
 ## ☕ Donate
 If you find this project useful, you can support:
 
 UCDT TRC20 wallet: TLkDJb4w188m5kNzGeKD97XGEfpfxrxUye
 
+---
+
 ## 📬 Contact
 Questions, suggestions, or want similar scripts?
 📧 Email: uzbtube@gmail.com
 
+---
