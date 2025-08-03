@@ -6,9 +6,11 @@ from datetime import datetime
 from pathlib import Path
 import hashlib
 
-DB_PATH = 'data/wiki_pages.db'
+# === CONFIGURATION ===
+# Set dump URL and local file path here
 DUMP_URL = 'https://dumps.wikimedia.org/other/shorturls/shorturls-20250728.gz'
 GZ_FILE = 'data/dumps/shorturls-20250728.gz'
+# =====================
 
 def init_db(db_path):
     """
