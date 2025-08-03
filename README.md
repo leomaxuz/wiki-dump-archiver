@@ -25,6 +25,10 @@ git clone https://github.com/leomaxuz/wiki-dump-archiver.git
 cd wiki-dump-archiver
 pip install -r requirements.txt
 ---
+
+⚙️ Configuration
+In get.py you can set the dump URL and local file path:
+```bash
 # === CONFIGURATION ===
 # Set dump URL and local file path here
 DUMP_URL = 'https://dumps.wikimedia.org/other/shorturls/shorturls-20250728.gz'
@@ -32,14 +36,7 @@ GZ_FILE = 'data/dumps/shorturls-20250728.gz'
 # =====================
 
 ## 📌 Usage
-bash
-Копировать
-Редактировать
-python get.py
-All pages will be saved in:
-
 SQLite database: data/wiki_pages.db
-
 Original dump file: data/dumps/
 
 ---
