@@ -10,7 +10,7 @@ Simple Python tool to:
 pip install -r requirements.txt
 
 ## Config. get.py
-```bash
+
 DB_PATH = 'data/wiki_pages.db'
 DUMP_URL = 'https://dumps.wikimedia.org/other/shorturls/shorturls-20250728.gz'
 GZ_FILE = 'data/dumps/shorturls-20250728.gz'
