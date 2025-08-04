@@ -1,22 +1,16 @@
 import gzip
-import json
 import requests
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import hashlib
 
-# === CONFIGURATION ===
-# Set dump URL and local file path here
 DB_PATH = 'data/wiki_pages.db'
 DUMP_URL = 'https://dumps.wikimedia.org/other/shorturls/shorturls-20250728.gz'
 GZ_FILE = 'data/dumps/shorturls-20250728.gz'
-# =====================
 
 def init_db(db_path):
-    """
-    Initialize SQLite database and create the 'pages' table if it doesn't exist.
-    """
+    # Create database and table if it doesn't exist
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
@@ -32,9 +26,7 @@ def init_db(db_path):
     conn.close()
 
 def download_dump(url, save_path):
-    """
-    Download the dump file from the given URL if it doesn't already exist locally.
-    """
+    # Download the dump file if it doesn't exist locally
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
     if save_path.exists():
@@ -49,9 +41,7 @@ def download_dump(url, save_path):
     print(f"✅ Downloaded: {save_path}")
 
 def extract_urls_from_gz(gz_file):
-    """
-    Read the .gz file and extract URLs line by line.
-    """
+    # Extract URLs from the gzip file
     urls = []
     with gzip.open(gz_file, 'rt', encoding='utf-8', errors='ignore') as f:
         for line in f:
@@ -61,58 +51,70 @@ def extract_urls_from_gz(gz_file):
     print(f"🔍 Found: {len(urls)} URLs")
     return urls
 
-def compute_hash(text):
-    """
-    Compute SHA-256 hash of the given text.
-    """
-    return hashlib.sha256(text.encode('utf-8')).hexdigest()
-
-def fetch_and_save_to_db(db_path, url):
-    """
-    Fetch page content by URL and save to DB if new or updated.
-    """
+def save_urls_to_db(db_path, urls):
+    # Save new URLs to the database; skip existing ones
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
 
-    try:
-        r = requests.get(url, timeout=10)
-        r.raise_for_status()
-        content = r.text
-        page_hash = compute_hash(content)
-        now = datetime.utcnow().isoformat()
+    total = len(urls)
+    added = 0
 
-        # Check if page already exists in DB
-        c.execute('SELECT hash FROM pages WHERE url=?', (url,))
-        row = c.fetchone()
+    for idx, url in enumerate(urls, start=1):
+        c.execute('SELECT 1 FROM pages WHERE url=?', (url,))
+        if c.fetchone() is None:
+            c.execute('INSERT INTO pages (url, content, hash, updated_at) VALUES (?, NULL, NULL, NULL)', (url,))
+            added += 1
+        # Show progress: [123/24545] Newly added: 10
+        print(f"\r[{idx}/{total}] Newly added: {added}", end='', flush=True)
 
-        if row is None:
-            # New page
-            c.execute('INSERT INTO pages (url, content, hash, updated_at) VALUES (?, ?, ?, ?)',
-                      (url, content, page_hash, now))
-            print(f"🆕 Added: {url}")
-        elif row[0] != page_hash:
-            # Updated page
+    conn.commit()
+    conn.close()
+    print()  # Newline at the end
+
+def compute_hash(text):
+    # Calculate SHA-256 hash of the text
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()
+
+def fetch_missing_pages(db_path):
+    # Fetch pages where content is still NULL and update them
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute('SELECT url FROM pages WHERE content IS NULL')
+    rows = c.fetchall()
+    total = len(rows)
+
+    success = 0
+
+    for idx, (url,) in enumerate(rows, start=1):
+        try:
+            r = requests.get(url, timeout=10)
+            r.raise_for_status()
+            content = r.text
+            page_hash = compute_hash(content)
+            now = datetime.now(timezone.utc).isoformat()
+
             c.execute('UPDATE pages SET content=?, hash=?, updated_at=? WHERE url=?',
                       (content, page_hash, now, url))
-            print(f"🔄 Updated: {url}")
-        else:
-            print(f"✅ Unchanged: {url}")
+            success += 1
+        except Exception:
+            # If request fails, leave content as NULL to retry next time
+            pass
 
-        conn.commit()
-    except Exception as e:
-        print(f"⚠️ Error: {url} -> {e}")
-    finally:
-        conn.close()
+        # Show progress: [123/24545] Fetched: 57
+        print(f"\r[{idx}/{total}] Fetched: {success}", end='', flush=True)
+
+    conn.commit()
+    conn.close()
+    print()  # Newline at the end
 
 if __name__ == "__main__":
     init_db(DB_PATH)
     download_dump(DUMP_URL, GZ_FILE)
 
     urls = extract_urls_from_gz(GZ_FILE)
-    total = len(urls)
+    save_urls_to_db(DB_PATH, urls)
 
-    for idx, url in enumerate(urls, start=1):
-        print(f"[{idx}/{total}] {url}")
-        fetch_and_save_to_db(DB_PATH, url)
+    print("📄 Contents are being fetched...")
+    fetch_missing_pages(DB_PATH)
 
     print("✅ Done")
