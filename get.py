@@ -4,13 +4,13 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 import hashlib
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 DB_PATH = 'data/wiki_pages.db'
 DUMP_URL = 'https://dumps.wikimedia.org/other/shorturls/shorturls-20250728.gz'
 GZ_FILE = 'data/dumps/shorturls-20250728.gz'
 
 def init_db(db_path):
-    # Create database and table if it doesn't exist
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
@@ -26,7 +26,6 @@ def init_db(db_path):
     conn.close()
 
 def download_dump(url, save_path):
-    # Download the dump file if it doesn't exist locally
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
     if save_path.exists():
@@ -41,7 +40,6 @@ def download_dump(url, save_path):
     print(f"✅ Downloaded: {save_path}")
 
 def extract_urls_from_gz(gz_file):
-    # Extract URLs from the gzip file
     urls = []
     with gzip.open(gz_file, 'rt', encoding='utf-8', errors='ignore') as f:
         for line in f:
@@ -52,60 +50,60 @@ def extract_urls_from_gz(gz_file):
     return urls
 
 def save_urls_to_db(db_path, urls):
-    # Save new URLs to the database; skip existing ones
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-
-    total = len(urls)
-    added = 0
+    total, added = len(urls), 0
 
     for idx, url in enumerate(urls, start=1):
         c.execute('SELECT 1 FROM pages WHERE url=?', (url,))
         if c.fetchone() is None:
             c.execute('INSERT INTO pages (url, content, hash, updated_at) VALUES (?, NULL, NULL, NULL)', (url,))
             added += 1
-        # Show progress: [123/24545] Newly added: 10
         print(f"\r[{idx}/{total}] Newly added: {added}", end='', flush=True)
 
     conn.commit()
     conn.close()
-    print()  # Newline at the end
+    print()
 
 def compute_hash(text):
-    # Calculate SHA-256 hash of the text
     return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
-def fetch_missing_pages(db_path):
-    # Fetch pages where content is still NULL and update them
+def fetch_and_update(url):
+    try:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        content = r.text
+        page_hash = compute_hash(content)
+        now = datetime.now(timezone.utc).isoformat()
+
+        # Har bir thread o‘z ulanishida yangilaydi
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute('UPDATE pages SET content=?, hash=?, updated_at=? WHERE url=?',
+                  (content, page_hash, now, url))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception:
+        return False
+
+def fetch_missing_pages_parallel(db_path, max_workers=10):
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     c.execute('SELECT url FROM pages WHERE content IS NULL')
     rows = c.fetchall()
-    total = len(rows)
+    conn.close()
 
+    total = len(rows)
     success = 0
 
-    for idx, (url,) in enumerate(rows, start=1):
-        try:
-            r = requests.get(url, timeout=10)
-            r.raise_for_status()
-            content = r.text
-            page_hash = compute_hash(content)
-            now = datetime.now(timezone.utc).isoformat()
-
-            c.execute('UPDATE pages SET content=?, hash=?, updated_at=? WHERE url=?',
-                      (content, page_hash, now, url))
-            success += 1
-        except Exception:
-            # If request fails, leave content as NULL to retry next time
-            pass
-
-        # Show progress: [123/24545] Fetched: 57
-        print(f"\r[{idx}/{total}] Fetched: {success}", end='', flush=True)
-
-    conn.commit()
-    conn.close()
-    print()  # Newline at the end
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(fetch_and_update, url[0]) for url in rows]
+        for idx, future in enumerate(as_completed(futures), start=1):
+            if future.result():
+                success += 1
+            print(f"\r[{idx}/{total}] Fetched: {success}", end='', flush=True)
+    print()
 
 if __name__ == "__main__":
     init_db(DB_PATH)
@@ -115,6 +113,6 @@ if __name__ == "__main__":
     save_urls_to_db(DB_PATH, urls)
 
     print("📄 Loading contents...")
-    fetch_missing_pages(DB_PATH)
+    fetch_missing_pages_parallel(DB_PATH, max_workers=10)
 
     print("✅ Done")
