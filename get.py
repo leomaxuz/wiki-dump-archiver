@@ -114,7 +114,7 @@ if __name__ == "__main__":
     urls = extract_urls_from_gz(GZ_FILE)
     save_urls_to_db(DB_PATH, urls)
 
-    print("📄 Contents are being fetched...")
+    print("📄 Loading contents...")
     fetch_missing_pages(DB_PATH)
 
     print("✅ Done")
